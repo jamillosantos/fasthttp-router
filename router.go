@@ -21,7 +21,7 @@ type Router struct {
 	NotFound fasthttp.RequestHandler
 }
 
-func NewRouter() *Router {
+func New() *Router {
 	return &Router{
 		children: make(map[string]*node),
 	}
@@ -34,10 +34,10 @@ func (router *Router) handle(method, path string, handler fasthttp.RequestHandle
 		router.children[method] = root
 	}
 
-	if path[0] == '/' {
+	if len(path) > 0 && path[0] == '/' {
 		path = path[1:]
 	}
-	root.Add(path, handler, make([]string, 0))
+	root.Add(path, handler, nil)
 }
 
 func (router *Router) DELETE(path string, handler fasthttp.RequestHandler) {
@@ -90,7 +90,17 @@ func (router *Router) Handler(ctx *fasthttp.RequestCtx) {
 		} else {
 			path = bytes.Split(ctx.Request.URI().Path(), routerHandlerSep)
 		}
-		found, node, values := node.Matches(path, make([][]byte, 0))
+		if len(path) == 1 && len(path[0]) == 0 {
+			if node.handler != nil {
+				node.handler(ctx)
+				return
+			}
+			if router.NotFound != nil {
+				router.NotFound(ctx)
+			}
+			return
+		}
+		found, node, values := node.Matches(path, nil)
 		if found {
 			for i, v := range values {
 				ctx.SetUserValue(node.names[i], string(v))

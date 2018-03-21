@@ -22,9 +22,6 @@ func newNode() *node {
 func (n *node) Add(path string, handler fasthttp.RequestHandler, names []string) {
 	pathBytes := bytes.Split([]byte(path), []byte{'/'})
 	lpath := len(pathBytes)
-	if names == nil {
-		names = make([]string, 0)
-	}
 	parent := n
 	for i := 0; i < lpath; i++ {
 		token := pathBytes[i]
@@ -37,6 +34,9 @@ func (n *node) Add(path string, handler fasthttp.RequestHandler, names []string)
 					node = newNode()
 					parent.wildcard = node
 					nodeCreated = true
+				}
+				if names == nil {
+					names = make([]string, 0)
 				}
 				names = append(names, name)
 				parent = node
@@ -68,6 +68,9 @@ func (n *node) Add(path string, handler fasthttp.RequestHandler, names []string)
 			}
 		} else if i+1 < lpath {
 			panic("empty token")
+		} else {
+			n.handler = handler
+			n.names = names
 		}
 	}
 }
@@ -86,7 +89,11 @@ func (n *node) Matches(path [][]byte, values [][]byte) (bool, *node, [][]byte) {
 				return true, node, values
 			}
 		} else if n.wildcard != nil {
-			values = append(values, path[i])
+			if values == nil {
+				values = [][]byte{path[i]}
+			} else {
+				values = append(values, path[i])
+			}
 			if i+1 < lpath {
 				return n.wildcard.Matches(path[i+1:], values)
 			} else if n.wildcard.handler == nil {
