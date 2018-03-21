@@ -16,10 +16,82 @@ func createRequestCtxFromPath(method, path string) *fasthttp.RequestCtx {
 
 var _ = Describe("Router", func() {
 
+	var emptyHandler fasthttp.RequestHandler = func(ctx *fasthttp.RequestCtx) {
+	}
+
 	Describe("Parse", func() {
 
-		var emptyHandler fasthttp.RequestHandler = func(ctx *fasthttp.RequestCtx) {
-		}
+		It("should parse a GET", func() {
+			router := NewRouter()
+			router.GET("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("GET"))
+			Expect(router.children["GET"].children).To(HaveKey("route"))
+			Expect(router.children["GET"].wildcard).To(BeNil())
+		})
+
+		It("should parse a POST", func() {
+			router := NewRouter()
+			router.POST("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("POST"))
+			Expect(router.children["POST"].children).To(HaveKey("route"))
+			Expect(router.children["POST"].wildcard).To(BeNil())
+		})
+
+		It("should parse a PUT", func() {
+			router := NewRouter()
+			router.PUT("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("PUT"))
+			Expect(router.children["PUT"].children).To(HaveKey("route"))
+			Expect(router.children["PUT"].wildcard).To(BeNil())
+		})
+
+		It("should parse a DELETE", func() {
+			router := NewRouter()
+			router.DELETE("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("DELETE"))
+			Expect(router.children["DELETE"].children).To(HaveKey("route"))
+			Expect(router.children["DELETE"].wildcard).To(BeNil())
+		})
+
+		It("should parse a HEAD", func() {
+			router := NewRouter()
+			router.HEAD("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("HEAD"))
+			Expect(router.children["HEAD"].children).To(HaveKey("route"))
+			Expect(router.children["HEAD"].wildcard).To(BeNil())
+		})
+
+		It("should parse a OPTIONS", func() {
+			router := NewRouter()
+			router.OPTIONS("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("OPTIONS"))
+			Expect(router.children["OPTIONS"].children).To(HaveKey("route"))
+			Expect(router.children["OPTIONS"].wildcard).To(BeNil())
+		})
+
+		It("should parse a PATCH", func() {
+			router := NewRouter()
+			router.PATCH("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("PATCH"))
+			Expect(router.children["PATCH"].children).To(HaveKey("route"))
+			Expect(router.children["PATCH"].wildcard).To(BeNil())
+		})
+
+		It("should parse a POST", func() {
+			router := NewRouter()
+			router.POST("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("POST"))
+			Expect(router.children["POST"].children).To(HaveKey("route"))
+			Expect(router.children["POST"].wildcard).To(BeNil())
+		})
 
 		It("should parse a complete static route", func() {
 			router := NewRouter()
@@ -217,6 +289,38 @@ var _ = Describe("Router", func() {
 			Expect(router.children["GET"].wildcard.children["invoice"].names).To(Equal([]string{"transaction"}))
 		})
 
+		It("should panic due to conflicting empty tokens", func() {
+			router := NewRouter()
+
+			Expect(func() {
+				router.GET("//detail", emptyHandler)
+			}).To(Panic())
+
+			Expect(func() {
+				router.GET("/account/detail//", emptyHandler)
+			}).To(Panic())
+
+			Expect(func() {
+				router.GET("/account//detail", emptyHandler)
+			}).To(Panic())
+		})
+
+		It("should not panic with empty token at the end", func() {
+			router := NewRouter()
+
+			Expect(func() {
+				router.GET("/account/", emptyHandler)
+			}).NotTo(Panic())
+
+			Expect(func() {
+				router.GET("/account/detail/", emptyHandler)
+			}).NotTo(Panic())
+
+			Expect(func() {
+				router.GET("/account/detail/:id/", emptyHandler)
+			}).NotTo(Panic())
+		})
+
 		It("should panic due to conflicting static routes", func() {
 			router := NewRouter()
 			router.GET("/account/detail", emptyHandler)
@@ -243,7 +347,145 @@ var _ = Describe("Router", func() {
 		})
 	})
 
-	Describe("Resolve", func() {
+	Describe("Group", func() {
+		It("should parse a GET", func() {
+			router := NewRouter()
+			group := router.Group("/group")
+			group.GET("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("GET"))
+			Expect(router.children["GET"].wildcard).To(BeNil())
+			Expect(router.children["GET"].children).To(HaveLen(1))
+			Expect(router.children["GET"].children).To(HaveKey("group"))
+			Expect(router.children["GET"].children["group"].wildcard).To(BeNil())
+			Expect(router.children["GET"].children["group"].handler).To(BeNil())
+			Expect(router.children["GET"].children["group"].children).To(HaveLen(1))
+			Expect(router.children["GET"].children["group"].children).To(HaveKey("route"))
+			Expect(router.children["GET"].children["group"].children["route"].wildcard).To(BeNil())
+			Expect(router.children["GET"].children["group"].children["route"].handler).NotTo(BeNil())
+			Expect(router.children["GET"].children["group"].children["route"].children).To(BeEmpty())
+		})
+
+		It("should parse a POST", func() {
+			router := NewRouter()
+			group := router.Group("/group")
+			group.POST("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("POST"))
+			Expect(router.children["POST"].wildcard).To(BeNil())
+			Expect(router.children["POST"].children).To(HaveLen(1))
+			Expect(router.children["POST"].children).To(HaveKey("group"))
+			Expect(router.children["POST"].children["group"].wildcard).To(BeNil())
+			Expect(router.children["POST"].children["group"].handler).To(BeNil())
+			Expect(router.children["POST"].children["group"].children).To(HaveLen(1))
+			Expect(router.children["POST"].children["group"].children).To(HaveKey("route"))
+			Expect(router.children["POST"].children["group"].children["route"].wildcard).To(BeNil())
+			Expect(router.children["POST"].children["group"].children["route"].handler).NotTo(BeNil())
+			Expect(router.children["POST"].children["group"].children["route"].children).To(BeEmpty())
+		})
+
+		It("should parse a PUT", func() {
+			router := NewRouter()
+			group := router.Group("/group")
+			group.PUT("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("PUT"))
+			Expect(router.children["PUT"].wildcard).To(BeNil())
+			Expect(router.children["PUT"].children).To(HaveLen(1))
+			Expect(router.children["PUT"].children).To(HaveKey("group"))
+			Expect(router.children["PUT"].children["group"].wildcard).To(BeNil())
+			Expect(router.children["PUT"].children["group"].handler).To(BeNil())
+			Expect(router.children["PUT"].children["group"].children).To(HaveLen(1))
+			Expect(router.children["PUT"].children["group"].children).To(HaveKey("route"))
+			Expect(router.children["PUT"].children["group"].children["route"].wildcard).To(BeNil())
+			Expect(router.children["PUT"].children["group"].children["route"].handler).NotTo(BeNil())
+			Expect(router.children["PUT"].children["group"].children["route"].children).To(BeEmpty())
+		})
+
+		It("should parse a DELETE", func() {
+			router := NewRouter()
+			group := router.Group("/group")
+			group.DELETE("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("DELETE"))
+			Expect(router.children["DELETE"].wildcard).To(BeNil())
+			Expect(router.children["DELETE"].children).To(HaveLen(1))
+			Expect(router.children["DELETE"].children).To(HaveKey("group"))
+			Expect(router.children["DELETE"].children["group"].wildcard).To(BeNil())
+			Expect(router.children["DELETE"].children["group"].handler).To(BeNil())
+			Expect(router.children["DELETE"].children["group"].children).To(HaveLen(1))
+			Expect(router.children["DELETE"].children["group"].children).To(HaveKey("route"))
+			Expect(router.children["DELETE"].children["group"].children["route"].wildcard).To(BeNil())
+			Expect(router.children["DELETE"].children["group"].children["route"].handler).NotTo(BeNil())
+			Expect(router.children["DELETE"].children["group"].children["route"].children).To(BeEmpty())
+		})
+
+		It("should parse a HEAD", func() {
+			router := NewRouter()
+			group := router.Group("/group")
+			group.HEAD("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("HEAD"))
+			Expect(router.children["HEAD"].wildcard).To(BeNil())
+			Expect(router.children["HEAD"].children).To(HaveLen(1))
+			Expect(router.children["HEAD"].children).To(HaveKey("group"))
+			Expect(router.children["HEAD"].children["group"].wildcard).To(BeNil())
+			Expect(router.children["HEAD"].children["group"].handler).To(BeNil())
+			Expect(router.children["HEAD"].children["group"].children).To(HaveLen(1))
+			Expect(router.children["HEAD"].children["group"].children).To(HaveKey("route"))
+			Expect(router.children["HEAD"].children["group"].children["route"].wildcard).To(BeNil())
+			Expect(router.children["HEAD"].children["group"].children["route"].handler).NotTo(BeNil())
+			Expect(router.children["HEAD"].children["group"].children["route"].children).To(BeEmpty())
+		})
+
+		It("should parse a OPTIONS", func() {
+			router := NewRouter()
+			group := router.Group("/group")
+			group.OPTIONS("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("OPTIONS"))
+			Expect(router.children["OPTIONS"].wildcard).To(BeNil())
+			Expect(router.children["OPTIONS"].children).To(HaveLen(1))
+			Expect(router.children["OPTIONS"].children).To(HaveKey("group"))
+			Expect(router.children["OPTIONS"].children["group"].wildcard).To(BeNil())
+			Expect(router.children["OPTIONS"].children["group"].handler).To(BeNil())
+			Expect(router.children["OPTIONS"].children["group"].children).To(HaveLen(1))
+			Expect(router.children["OPTIONS"].children["group"].children).To(HaveKey("route"))
+			Expect(router.children["OPTIONS"].children["group"].children["route"].wildcard).To(BeNil())
+			Expect(router.children["OPTIONS"].children["group"].children["route"].handler).NotTo(BeNil())
+			Expect(router.children["OPTIONS"].children["group"].children["route"].children).To(BeEmpty())
+		})
+
+		It("should parse a PATCH", func() {
+			router := NewRouter()
+			group := router.Group("/group")
+			group.PATCH("/route", emptyHandler)
+
+			Expect(router.children).To(HaveKey("PATCH"))
+			Expect(router.children["PATCH"].wildcard).To(BeNil())
+			Expect(router.children["PATCH"].children).To(HaveLen(1))
+			Expect(router.children["PATCH"].children).To(HaveKey("group"))
+			Expect(router.children["PATCH"].children["group"].wildcard).To(BeNil())
+			Expect(router.children["PATCH"].children["group"].handler).To(BeNil())
+			Expect(router.children["PATCH"].children["group"].children).To(HaveLen(1))
+			Expect(router.children["PATCH"].children["group"].children).To(HaveKey("route"))
+			Expect(router.children["PATCH"].children["group"].children["route"].wildcard).To(BeNil())
+			Expect(router.children["PATCH"].children["group"].children["route"].handler).NotTo(BeNil())
+			Expect(router.children["PATCH"].children["group"].children["route"].children).To(BeEmpty())
+		})
+
+		It("should check the subgroup", func() {
+			router := NewRouter()
+			group := router.Group("/group")
+			group2 := group.Group("/subgroup").(*routerGroup)
+
+			Expect(group2).NotTo(BeNil())
+			Expect(group2.router).To(Equal(group))
+			Expect(group2.prefix).To(Equal("/subgroup"))
+		})
+	})
+
+	Describe("Handle", func() {
 		var router *Router
 
 		BeforeEach(func() {
@@ -253,6 +495,17 @@ var _ = Describe("Router", func() {
 		It("should resolve a static route", func() {
 			value := 1
 			router.GET("/static", func(ctx *fasthttp.RequestCtx) {
+				value = 2
+			})
+
+			router.Handler(createRequestCtxFromPath("GET", "/static"))
+
+			Expect(value).To(Equal(2))
+		})
+
+		It("should resolve a static route not starting with /", func() {
+			value := 1
+			router.GET("static", func(ctx *fasthttp.RequestCtx) {
 				value = 2
 			})
 
@@ -349,6 +602,101 @@ var _ = Describe("Router", func() {
 			Expect(value1).To(Equal(2))
 			Expect(value2).To(Equal(2))
 			Expect(value3).To(Equal(2))
+		})
+
+		It("should call the not found callback for static routes", func() {
+			value1 := 1
+
+			router.GET("/account/transactions", func(ctx *fasthttp.RequestCtx) {
+				Fail("should not be called")
+			})
+
+			router.NotFound = func(ctx *fasthttp.RequestCtx) {
+				value1 = 2
+			}
+			router.Handler(createRequestCtxFromPath("GET", "/account/transactions_notfound"))
+
+			Expect(value1).To(Equal(2))
+		})
+
+		It("should call the not found callback for static routes half path", func() {
+			value1 := 1
+
+			router.GET("/account/transactions", func(ctx *fasthttp.RequestCtx) {
+				Fail("should not be called")
+			})
+
+			router.NotFound = func(ctx *fasthttp.RequestCtx) {
+				value1 = 2
+			}
+			router.Handler(createRequestCtxFromPath("GET", "/account"))
+
+			Expect(value1).To(Equal(2))
+		})
+
+		It("should call the not found callback for wildcard routes", func() {
+			value1 := 1
+			value2 := 1
+			value3 := 1
+
+			router.GET("/:account/transactions", func(ctx *fasthttp.RequestCtx) {
+				Fail("should not be called")
+			})
+			router.GET("/:account/profile", func(ctx *fasthttp.RequestCtx) {
+				Fail("should not be called")
+			})
+			router.GET("/:user/roles", func(ctx *fasthttp.RequestCtx) {
+				Fail("should not be called")
+			})
+
+			router.NotFound = func(ctx *fasthttp.RequestCtx) {
+				value1 = 2
+			}
+			router.Handler(createRequestCtxFromPath("GET", "/value1/transactions_notfound"))
+
+			router.NotFound = func(ctx *fasthttp.RequestCtx) {
+				value2 = 2
+			}
+			router.Handler(createRequestCtxFromPath("GET", "/value2/profile_notfound"))
+
+			router.NotFound = func(ctx *fasthttp.RequestCtx) {
+				value3 = 2
+			}
+			router.Handler(createRequestCtxFromPath("GET", "/value3/roles_notfound"))
+
+			Expect(value1).To(Equal(2))
+			Expect(value2).To(Equal(2))
+			Expect(value3).To(Equal(2))
+		})
+
+		It("should call the not found callback for wildcard half path", func() {
+			value1 := 1
+
+			router.GET("/:account/transactions", func(ctx *fasthttp.RequestCtx) {
+				Fail("should not be called")
+			})
+
+			router.NotFound = func(ctx *fasthttp.RequestCtx) {
+				value1 = 2
+			}
+			router.Handler(createRequestCtxFromPath("GET", "/value1"))
+
+			Expect(value1).To(Equal(2))
+		})
+
+		It("should call the not found callback for wrong method", func() {
+			value1 := 1
+
+			router.GET("/:account/transactions", func(ctx *fasthttp.RequestCtx) {
+				Fail("should not be called")
+			})
+
+			router.NotFound = func(ctx *fasthttp.RequestCtx) {
+				value1 = 2
+			}
+			router.Handler(createRequestCtxFromPath("POST", "/value1"))
+
+			Expect(value1).To(Equal(2))
 		})
 	})
 })

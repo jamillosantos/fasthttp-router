@@ -66,7 +66,7 @@ func (n *node) Add(path string, handler fasthttp.RequestHandler, names []string)
 					return
 				}
 			}
-		} else {
+		} else if i+1 < lpath {
 			panic("empty token")
 		}
 	}
@@ -81,7 +81,7 @@ func (n *node) Matches(path [][]byte, values [][]byte) (bool, *node, [][]byte) {
 			if i+1 < lpath {
 				return node.Matches(path[i+1:], values)
 			} else if node.handler == nil {
-				return true, n.wildcard, values
+				return false, nil, nil
 			} else {
 				return true, node, values
 			}
