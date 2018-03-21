@@ -1,0 +1,30 @@
+version: 2
+machine:
+  services:
+    - mongodb
+
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.9.2
+
+    working_directory: /go/src/github.com/jamillosantos/fasthttp-router
+    steps:
+      - checkout
+
+      - run: go version
+
+      - run:
+          name: Get dependencies
+          command: |
+            go get -t -v ./...
+
+      - run:
+          name: Run tests with coverage
+          command: |
+            go test -race -coverprofile=coverage.txt -covermode=atomic
+
+      - run:
+          name: Upload data to Codecov
+          command: |
+            bash <(curl -s https://codecov.io/bash) -t 225ed846-39ca-4d98-9a75-7cbc00967884
