@@ -610,26 +610,29 @@ var _ = Describe("Router", func() {
 			Expect(value3).To(Equal(2))
 		})
 
-		It("should resolve a multiple wildcard routes", func() {
+		It("should resolve a multiple wildcard routes in sequence", func() {
 			value1 := 1
 			value2 := 1
 			value3 := 1
-			router.GET("/:account/transactions", func(ctx *fasthttp.RequestCtx) {
-				Expect(ctx.UserValue("account")).To(Equal("value1"))
+			router.GET("/:account/:subscription/cancel", func(ctx *fasthttp.RequestCtx) {
+				Expect(ctx.UserValue("account")).To(Equal("account1"))
+				Expect(ctx.UserValue("subscription")).To(Equal("subscription1"))
 				value1 = 2
 			})
-			router.GET("/:account/profile", func(ctx *fasthttp.RequestCtx) {
-				Expect(ctx.UserValue("account")).To(Equal("value2"))
+			router.GET("/:account/:subscription/history", func(ctx *fasthttp.RequestCtx) {
+				Expect(ctx.UserValue("account")).To(Equal("account2"))
+				Expect(ctx.UserValue("subscription")).To(Equal("subscription2"))
 				value2 = 2
 			})
-			router.GET("/:user/roles", func(ctx *fasthttp.RequestCtx) {
-				Expect(ctx.UserValue("user")).To(Equal("value3"))
+			router.GET("/:account/:subscription", func(ctx *fasthttp.RequestCtx) {
+				Expect(ctx.UserValue("account")).To(Equal("account3"))
+				Expect(ctx.UserValue("subscription")).To(Equal("subscription3"))
 				value3 = 2
 			})
 
-			router.Handler(createRequestCtxFromPath("GET", "/value1/transactions"))
-			router.Handler(createRequestCtxFromPath("GET", "/value2/profile"))
-			router.Handler(createRequestCtxFromPath("GET", "/value3/roles"))
+			router.Handler(createRequestCtxFromPath("GET", "/account1/subscription1/cancel"))
+			router.Handler(createRequestCtxFromPath("GET", "/account2/subscription2/history"))
+			router.Handler(createRequestCtxFromPath("GET", "/account3/subscription3"))
 
 			Expect(value1).To(Equal(2))
 			Expect(value2).To(Equal(2))
