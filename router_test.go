@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/valyala/fasthttp"
 	"fmt"
+	"testing"
 )
 
 func createRequestCtxFromPath(method, path string) *fasthttp.RequestCtx {
@@ -14,10 +15,52 @@ func createRequestCtxFromPath(method, path string) *fasthttp.RequestCtx {
 	return result
 }
 
+var emptyHandler fasthttp.RequestHandler = func(ctx *fasthttp.RequestCtx) {
+}
+
 var _ = Describe("Router", func() {
 
-	var emptyHandler fasthttp.RequestHandler = func(ctx *fasthttp.RequestCtx) {
-	}
+	Describe("Split", func() {
+		It("should split the path", func() {
+			path := []byte("/path/with/four/parts")
+			tokens := make([][]byte, 0)
+			tokens = Split(path, tokens)
+			Expect(tokens).To(HaveLen(4))
+			Expect(tokens[0]).To(Equal([]byte("path")))
+			Expect(tokens[1]).To(Equal([]byte("with")))
+			Expect(tokens[2]).To(Equal([]byte("four")))
+			Expect(tokens[3]).To(Equal([]byte("parts")))
+		})
+
+		It("should split the path not starting with /", func() {
+			path := []byte("path/with/four/parts")
+			tokens := make([][]byte, 0)
+			tokens = Split(path, tokens)
+			Expect(tokens).To(HaveLen(4))
+			Expect(tokens[0]).To(Equal([]byte("path")))
+			Expect(tokens[1]).To(Equal([]byte("with")))
+			Expect(tokens[2]).To(Equal([]byte("four")))
+			Expect(tokens[3]).To(Equal([]byte("parts")))
+		})
+
+		It("should split the path ending with /", func() {
+			path := []byte("/path/with/four/parts/")
+			tokens := make([][]byte, 0)
+			tokens = Split(path, tokens)
+			Expect(tokens).To(HaveLen(4))
+			Expect(tokens[0]).To(Equal([]byte("path")))
+			Expect(tokens[1]).To(Equal([]byte("with")))
+			Expect(tokens[2]).To(Equal([]byte("four")))
+			Expect(tokens[3]).To(Equal([]byte("parts")))
+		})
+
+		It("should split an empty path", func() {
+			path := []byte("/")
+			tokens := make([][]byte, 0)
+			tokens = Split(path, tokens)
+			Expect(tokens).To(BeEmpty())
+		})
+	})
 
 	Describe("Parse", func() {
 
@@ -750,3 +793,24 @@ var _ = Describe("Router", func() {
 		})
 	})
 })
+
+func BenchmarkSplit(b *testing.B) {
+	path := []byte("/path/with/four/parts")
+	tokens := make([][]byte, 0)
+
+	for i := 0; i < b.N; i++ {
+		tokens = Split(path, tokens)
+		tokens = tokens[0:0]
+	}
+}
+
+func BenchmarkRouter_Handler(b *testing.B) {
+	router := New()
+	router.GET("/", emptyHandler)
+	ctx := fasthttp.RequestCtx{}
+	ctx.Request.SetRequestURI("/")
+
+	for i := 0; i < b.N; i++ {
+		router.Handler(&ctx)
+	}
+}

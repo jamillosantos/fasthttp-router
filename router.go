@@ -3,6 +3,7 @@ package fasthttp_router
 import (
 	"github.com/valyala/fasthttp"
 	"fmt"
+	"sync"
 	"bytes"
 )
 
@@ -76,20 +77,53 @@ func (router *Router) Group(path string, middlewares ... Middleware) Routable {
 	}
 }
 
-var (
-	routerHandlerSep = []byte{'/'}
-)
+func Split(source []byte, dest [][]byte) [][]byte {
+	lSource := len(source)
+	s := 0
+	for i := 0; i < lSource; i++ {
+		if source[i] == '/' {
+			if i != s {
+				dest = append(dest, source[s:i])
+				s = i+1
+			} else {
+				s = i + 1
+			}
+		} else if i+1 == lSource {
+			if i != s {
+				dest = append(dest, source[s:i+1])
+			}
+		}
+	}
+	return dest
+}
+
+var routerHandlerSep = []byte{'/'}
+
+var pathPool = sync.Pool{
+	New: func() interface{} {
+		return make([][]byte, 0)
+	},
+}
 
 func (router *Router) Handler(ctx *fasthttp.RequestCtx) {
 	method := string(ctx.Method())
 	node, ok := router.children[method]
 	if ok {
+		path := pathPool.Get().([][]byte)
+		path = Split(ctx.Request.URI().Path(), path)
+		defer func() {
+			path = path[0:0]
+			pathPool.Put(path)
+		}()
+			path = bytes.Split(ctx.Request.URI().Path()[1:], routerHandlerSep)
+		/*
 		var path [][]byte
 		if ctx.Request.URI().Path()[0] == '/' {
 			path = bytes.Split(ctx.Request.URI().Path()[1:], routerHandlerSep)
 		} else {
 			path = bytes.Split(ctx.Request.URI().Path(), routerHandlerSep)
 		}
+		*/
 		if len(path) == 1 && len(path[0]) == 0 {
 			if node.handler != nil {
 				node.handler(ctx)
